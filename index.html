@@ -2718,13 +2718,17 @@ function openQuickAddPicker(dayIdx,moment){
       var ids = state.likedIds;
       var q = (filter||"").toLowerCase().trim();
       var found = 0;
+      // Recettes déjà dans le planning cette semaine
+      var plannedIds = {};
+      Object.values(state.weekPlanning).forEach(function(rid){ plannedIds[rid]=true; });
       ids.forEach(function(id){
         var r=getRecipe(id);if(!r) return;
         if(q && r.title.toLowerCase().indexOf(q)===-1 && r.tag1.toLowerCase().indexOf(q)===-1) return;
         found++;
+        var alreadyPlanned = !!plannedIds[id];
         var btn=document.createElement("button");
-        btn.style.cssText="width:100%;text-align:left;padding:10px 12px;border-radius:12px;border:2px solid var(--gray-light);background:transparent;font-family:inherit;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:8px;margin-bottom:6px;transition:all .15s;";
-        btn.innerHTML="<span style='font-size:22px'>"+r.emoji+"</span><div><div style='color:var(--dark)'>"+r.title+"</div><div style='color:var(--gray);font-size:10px;font-weight:400'>"+r.time+" • "+r.tag1+"</div></div>";
+        btn.style.cssText="width:100%;text-align:left;padding:10px 12px;border-radius:12px;border:2px solid var(--gray-light);background:transparent;font-family:inherit;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:8px;margin-bottom:6px;transition:all .15s;"+(alreadyPlanned?"opacity:0.35;filter:grayscale(1);":"");
+        btn.innerHTML="<span style='font-size:22px'>"+r.emoji+"</span><div><div style='color:var(--dark)'>"+r.title+(alreadyPlanned?" <span style='font-size:9px;color:var(--gray);font-weight:400'>déjà planifié</span>":"")+"</div><div style='color:var(--gray);font-size:10px;font-weight:400'>"+r.time+" • "+r.tag1+"</div></div>";
         btn.addEventListener("mouseenter",function(){btn.style.borderColor="var(--pink)";btn.style.background="var(--pink-soft)";});
         btn.addEventListener("mouseleave",function(){btn.style.borderColor="var(--gray-light)";btn.style.background="transparent";});
         btn.addEventListener("click",function(){
@@ -3308,6 +3312,17 @@ function initProfileScreen(){
 function init(){
   // Charger les données sauvegardées
   loadFromStorage();
+
+  // Skip onboarding si utilisateur déjà connu
+  if(state.likedIds.length > 0 || Object.keys(state.weekPlanning).length > 0 || Object.keys(state.checkedItems).length > 0){
+    showScreen("main");
+    _buildDeck(false);
+    renderCard();
+    renderSavedScreen();
+    renderCalendar();
+    renderShoppingList();
+    updateBadges(false);
+  }
 
   // Onboarding
   bind("btn-start",function(){goTo("onboard");});
