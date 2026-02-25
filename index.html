@@ -1619,6 +1619,7 @@ function saveCustomRecipe(){
   }
 
   toast("✅ Recette ajoutée au swipe !");
+  saveToStorage();
   resetCreateForm();
   switchCreateTab("list");
 }
@@ -2071,6 +2072,7 @@ function likeRecipe(id){
   if(isLiked(id)) return false;
   state.likedIds.push(id);
   updateBadges(true);
+  saveToStorage();
   return true;
 }
 function unlikeRecipe(id){
@@ -2080,6 +2082,7 @@ function unlikeRecipe(id){
   var si=state.selectedIds.indexOf(id);
   if(si!==-1) state.selectedIds.splice(si,1);
   updateBadges(false);
+  saveToStorage();
 }
 function getRecipe(id){
   var all=RECIPES.concat(CUSTOM_RECIPES);
@@ -2495,6 +2498,7 @@ function confirmPlanning(){
   renderShoppingList();
   var dayName=DAYS_FULL[state.pickerDay];
   var moment=state.pickerTime==="midi"?"à midi":"le soir";
+  saveToStorage();
   toast("📅 "+r.title+" ajoutée "+moment+" ("+dayName+")");
 }
 
@@ -2574,6 +2578,7 @@ function renderCalendar(){
           renderShoppingList();
           state.checkedItems={};
         updateBadges(false);
+        saveToStorage();
               toast("Repas retiré du planning");
         });
         // Drag start
@@ -3014,6 +3019,7 @@ function renderShoppingList(){
         } else {
           state.checkedItems[item.key] = true;
         }
+        saveToStorage();
         renderShoppingList();
       });
 
@@ -3576,6 +3582,55 @@ function exportShoppingPDF(){
 }
 
 })();
+</script>
+
+<script>
+/* ═══════════════════════════════════════════
+   RECIPY — LOCALSTORAGE PERSISTENCE
+═══════════════════════════════════════════ */
+var LS_KEY = "recipy_v1";
+
+function saveToStorage(){
+  try {
+    var data = {
+      likedIds:      state.likedIds.slice(),
+      weekPlanning:  Object.assign({}, state.weekPlanning),
+      checkedItems:  Object.assign({}, state.checkedItems),
+      profile:       Object.assign({}, state.profile),
+      customRecipes: CUSTOM_RECIPES.map(function(r){ return Object.assign({}, r); })
+    };
+    localStorage.setItem(LS_KEY, JSON.stringify(data));
+  } catch(e){ console.warn("Save error:", e); }
+}
+
+function loadFromStorage(){
+  try {
+    var raw = localStorage.getItem(LS_KEY);
+    if(!raw) return;
+    var data = JSON.parse(raw);
+    if(data.likedIds)     state.likedIds     = data.likedIds;
+    if(data.weekPlanning) state.weekPlanning = data.weekPlanning;
+    if(data.checkedItems) state.checkedItems = data.checkedItems;
+    if(data.profile)      state.profile      = Object.assign(state.profile, data.profile);
+    if(data.customRecipes && data.customRecipes.length){
+      CUSTOM_RECIPES.splice(0, CUSTOM_RECIPES.length);
+      data.customRecipes.forEach(function(r){ CUSTOM_RECIPES.push(r); });
+      var maxId = data.customRecipes.reduce(function(m,r){ return Math.max(m, r.id||0); }, 9999);
+      _customNextId = maxId + 1;
+    }
+  } catch(e){ console.warn("Load error:", e); }
+}
+
+/* Charger au démarrage */
+document.addEventListener("DOMContentLoaded", function(){
+  loadFromStorage();
+  _buildDeck(false);
+  renderCard();
+  renderSavedScreen();
+  renderCalendar();
+  renderShoppingList();
+  updateBadges(false);
+});
 </script>
 
 <script>
