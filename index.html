@@ -1864,6 +1864,43 @@ var state={
   seenIds:{}
 };
 
+/* ═══════════════════════════════════════════
+   LOCALSTORAGE PERSISTENCE
+═══════════════════════════════════════════ */
+var LS_KEY = "recipy_v1";
+
+function saveToStorage(){
+  try {
+    var data = {
+      likedIds:      state.likedIds.slice(),
+      weekPlanning:  Object.assign({}, state.weekPlanning),
+      checkedItems:  Object.assign({}, state.checkedItems),
+      profile:       Object.assign({}, state.profile),
+      customRecipes: CUSTOM_RECIPES.map(function(r){ return Object.assign({},r); })
+    };
+    localStorage.setItem(LS_KEY, JSON.stringify(data));
+  } catch(e){ console.warn("Save error:", e); }
+}
+
+function loadFromStorage(){
+  try {
+    var raw = localStorage.getItem(LS_KEY);
+    if(!raw) return;
+    var d = JSON.parse(raw);
+    if(d.likedIds)     state.likedIds     = d.likedIds;
+    if(d.weekPlanning) state.weekPlanning = d.weekPlanning;
+    if(d.checkedItems) state.checkedItems = d.checkedItems;
+    if(d.profile)      state.profile      = Object.assign(state.profile, d.profile);
+    if(d.customRecipes && d.customRecipes.length){
+      CUSTOM_RECIPES.splice(0, CUSTOM_RECIPES.length);
+      d.customRecipes.forEach(function(r){ CUSTOM_RECIPES.push(r); });
+      var mx = d.customRecipes.reduce(function(m,r){ return Math.max(m,r.id||0); }, 9999);
+      _customNextId = mx + 1;
+    }
+  } catch(e){ console.warn("Load error:", e); }
+}
+
+
 // shoppingList is DERIVED — never stored
 function computeShoppingList(){
   // 1. Collect all recipe IDs in planning
@@ -3286,6 +3323,9 @@ function initProfileScreen(){
 }
 
 function init(){
+  // Charger les données sauvegardées
+  loadFromStorage();
+
   // Onboarding
   bind("btn-start",function(){goTo("onboard");});
   bind("btn-to-allergies",function(){goTo("allergies");});
@@ -3582,55 +3622,6 @@ function exportShoppingPDF(){
 }
 
 })();
-</script>
-
-<script>
-/* ═══════════════════════════════════════════
-   RECIPY — LOCALSTORAGE PERSISTENCE
-═══════════════════════════════════════════ */
-var LS_KEY = "recipy_v1";
-
-function saveToStorage(){
-  try {
-    var data = {
-      likedIds:      state.likedIds.slice(),
-      weekPlanning:  Object.assign({}, state.weekPlanning),
-      checkedItems:  Object.assign({}, state.checkedItems),
-      profile:       Object.assign({}, state.profile),
-      customRecipes: CUSTOM_RECIPES.map(function(r){ return Object.assign({}, r); })
-    };
-    localStorage.setItem(LS_KEY, JSON.stringify(data));
-  } catch(e){ console.warn("Save error:", e); }
-}
-
-function loadFromStorage(){
-  try {
-    var raw = localStorage.getItem(LS_KEY);
-    if(!raw) return;
-    var data = JSON.parse(raw);
-    if(data.likedIds)     state.likedIds     = data.likedIds;
-    if(data.weekPlanning) state.weekPlanning = data.weekPlanning;
-    if(data.checkedItems) state.checkedItems = data.checkedItems;
-    if(data.profile)      state.profile      = Object.assign(state.profile, data.profile);
-    if(data.customRecipes && data.customRecipes.length){
-      CUSTOM_RECIPES.splice(0, CUSTOM_RECIPES.length);
-      data.customRecipes.forEach(function(r){ CUSTOM_RECIPES.push(r); });
-      var maxId = data.customRecipes.reduce(function(m,r){ return Math.max(m, r.id||0); }, 9999);
-      _customNextId = maxId + 1;
-    }
-  } catch(e){ console.warn("Load error:", e); }
-}
-
-/* Charger au démarrage */
-document.addEventListener("DOMContentLoaded", function(){
-  loadFromStorage();
-  _buildDeck(false);
-  renderCard();
-  renderSavedScreen();
-  renderCalendar();
-  renderShoppingList();
-  updateBadges(false);
-});
 </script>
 
 <script>
