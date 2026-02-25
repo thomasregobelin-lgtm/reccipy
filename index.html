@@ -1869,6 +1869,29 @@ var state={
 ═══════════════════════════════════════════ */
 var LS_KEY = "recipy_v1";
 
+/* Stockage avec fallback : localStorage → sessionStorage → cookie */
+function _getStorage(){
+  try { localStorage.setItem("_t","1"); localStorage.removeItem("_t"); return localStorage; } catch(e){}
+  try { sessionStorage.setItem("_t","1"); sessionStorage.removeItem("_t"); return sessionStorage; } catch(e){}
+  return null;
+}
+
+function _saveCookie(val){
+  try {
+    var exp = new Date(); exp.setFullYear(exp.getFullYear()+1);
+    // On stocke seulement likedIds et weekPlanning dans le cookie (taille limitée)
+    var small = {likedIds:val.likedIds, weekPlanning:val.weekPlanning};
+    document.cookie = LS_KEY+"="+encodeURIComponent(JSON.stringify(small))+";expires="+exp.toUTCString()+";path=/;SameSite=Lax";
+  } catch(e){}
+}
+
+function _loadCookie(){
+  try {
+    var match = document.cookie.match(new RegExp('(?:^|; )'+LS_KEY+'=([^;]*)'));
+    return match ? JSON.parse(decodeURIComponent(match[1])) : null;
+  } catch(e){ return null; }
+}
+
 function saveToStorage(){
   try {
     var data = {
@@ -1878,15 +1901,21 @@ function saveToStorage(){
       profile:       Object.assign({}, state.profile),
       customRecipes: CUSTOM_RECIPES.map(function(r){ return Object.assign({},r); })
     };
-    localStorage.setItem(LS_KEY, JSON.stringify(data));
+    var store = _getStorage();
+    if(store){
+      store.setItem(LS_KEY, JSON.stringify(data));
+    } else {
+      _saveCookie(data);
+    }
   } catch(e){ console.warn("Save error:", e); }
 }
 
 function loadFromStorage(){
   try {
-    var raw = localStorage.getItem(LS_KEY);
-    if(!raw) return;
-    var d = JSON.parse(raw);
+    var store = _getStorage();
+    var raw = store ? store.getItem(LS_KEY) : null;
+    var d = raw ? JSON.parse(raw) : _loadCookie();
+    if(!d) return;
     if(d.likedIds)     state.likedIds     = d.likedIds;
     if(d.weekPlanning) state.weekPlanning = d.weekPlanning;
     if(d.checkedItems) state.checkedItems = d.checkedItems;
@@ -2652,6 +2681,7 @@ function renderCalendar(){
             state.weekPlanning[key]=rid2;
             state.checkedItems={};
             updateBadges(false);
+            saveToStorage();
             renderCalendar();
             renderShoppingList();
             toast("Repas déplacé !");
@@ -2749,6 +2779,7 @@ function openQuickAddPicker(dayIdx,moment){
           state.weekPlanning[dayIdx+"-"+moment]=id;
           state.checkedItems={};
           updateBadges(false);
+          saveToStorage();
           closeModal();
           renderCalendar();
           renderShoppingList();
@@ -3422,6 +3453,7 @@ function init(){
     state.weekPlanning={};
     state.checkedItems={};
     updateBadges(false);
+    saveToStorage();
     renderCalendar();renderShoppingList();
     toast("Planning vidé");
   });
