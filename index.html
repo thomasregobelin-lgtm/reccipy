@@ -705,7 +705,7 @@ html{height:100%;overflow:hidden;}
           <div class="card-meta">
             <div class="card-meta-item">⏱️ <span id="ctime"></span></div>
             <div class="card-meta-item">👤 2 pers.</div>
-            <div class="card-meta-item">⭐ 4.8</div>
+            <div class="card-meta-item">💰 <span id="cprice"></span></div>
           </div>
         </div>
       </div>
@@ -733,7 +733,8 @@ html{height:100%;overflow:hidden;}
       <button class="det-fav" id="btn-det-fav">★</button>
     </div>
     <div class="det-body">
-      <div class="card-tags" style="margin-bottom:7px;"><div class="card-tag" id="det-tag1"></div><div class="card-tag" id="det-tag2"></div></div>
+      <div class="card-tags" style="margin-bottom:7px;"><div class="card-tag" id="det-tag1"></div><div class="card-tag" id="det-tag2"></div>
+        <div id="det-price" style="font-size:12px;font-weight:600;color:#FF3E7F;margin-top:4px;"></div></div>
       <div class="det-title" id="det-title"></div>
       <div class="det-desc" id="det-desc"></div>
       <div class="portion-ctrl">
@@ -802,8 +803,15 @@ html{height:100%;overflow:hidden;}
   <div class="screen" id="calendar" style="flex-direction:column;">
     <div class="status-bar"><span>9:41</span><span>▲▲ 🔋</span></div>
     <div class="cal-hdr">
-      <div class="main-title">Planning</div>
-      <button class="icon-btn" id="btn-clear-week" title="Vider la semaine">🗑️</button>
+      <button class="icon-btn" id="btn-week-prev" title="Semaine précédente" style="font-size:18px;">‹</button>
+      <div style="flex:1;text-align:center;">
+        <div class="main-title" style="font-size:16px;margin:0;">Planning</div>
+        <div id="cal-week-label" style="font-size:10px;color:#6B7280;font-weight:500;margin-top:1px;"></div>
+      </div>
+      <div style="display:flex;gap:4px;">
+        <button class="icon-btn" id="btn-week-next" title="Semaine suivante" style="font-size:18px;">›</button>
+        <button class="icon-btn" id="btn-clear-week" title="Vider la semaine">🗑️</button>
+      </div>
     </div>
     <!-- 7 day strip -->
     <!-- Planning indicator -->
@@ -838,7 +846,27 @@ html{height:100%;overflow:hidden;}
     <!-- Recettes source -->
     <div id="shop-recipes-summary" style="margin:0 14px 10px;padding:10px 14px;background:#fff;border-radius:12px;box-shadow:0 1px 4px rgba(0,0,0,.06);flex-shrink:0;display:none;"></div>
     <!-- BODY (populated by JS) -->
-    <div id="shop-body" style="flex:1;overflow-y:auto;padding:0 14px 14px;"></div>
+    <div id="shop-body" style="flex:1;overflow-y:auto;padding:0 14px 80px;position:relative;"></div>
+
+    <!-- Bouton + flottant -->
+    <button id="btn-add-manual" onclick="openAddManualModal()" style="position:absolute;bottom:72px;right:16px;width:52px;height:52px;border-radius:50%;background:linear-gradient(135deg,#FF3E7F,#FF6B6B);border:none;color:#fff;font-size:28px;cursor:pointer;box-shadow:0 4px 16px rgba(255,62,127,.4);display:flex;align-items:center;justify-content:center;z-index:10;">+</button>
+
+    <!-- Modal ajout manuel -->
+    <div id="modal-add-manual" style="display:none;position:absolute;inset:0;background:rgba(0,0,0,.5);z-index:100;align-items:flex-end;">
+      <div style="background:#fff;border-radius:24px 24px 0 0;padding:24px 20px;width:100%;box-sizing:border-box;">
+        <div style="font-family:'Playfair Display',Georgia,serif;font-size:20px;font-weight:700;color:#1A1A2E;margin-bottom:16px;">Ajouter un article</div>
+        <input id="manual-item-input" type="text" placeholder="Ex: Café, PQ, Lait..." style="width:100%;padding:12px 14px;border:2px solid #F0F0F5;border-radius:12px;font-size:14px;font-family:inherit;outline:none;box-sizing:border-box;margin-bottom:12px;"/>
+        <div style="margin-bottom:16px;">
+          <div style="font-size:11px;font-weight:700;color:#6B7280;letter-spacing:.5px;margin-bottom:8px;">RAYON</div>
+          <div id="manual-cat-picker" style="display:flex;flex-wrap:wrap;gap:6px;"></div>
+        </div>
+        <div style="display:flex;gap:10px;">
+          <button onclick="closeAddManualModal()" style="flex:1;padding:14px;border-radius:14px;border:2px solid #F0F0F5;background:transparent;font-size:14px;font-weight:600;cursor:pointer;color:#6B7280;">Annuler</button>
+          <button onclick="confirmAddManual()" style="flex:2;padding:14px;border-radius:14px;border:none;background:linear-gradient(135deg,#FF3E7F,#FF6B6B);color:#fff;font-size:14px;font-weight:700;cursor:pointer;">Ajouter ✓</button>
+        </div>
+      </div>
+    </div>
+
     <nav class="bottom-nav">
       <div class="nav-indicator"></div>
       <button class="nav-btn" data-tab="0" data-goto="main"><div class="nav-icon">🍴</div><div class="nav-label">Accueil</div></button>
@@ -1672,14 +1700,29 @@ function initCreateScreen(){
    INGREDIENT CATEGORIES MAP
 ═══════════════════════════════════════════ */
 var ING_CATEGORIES={
-  legumes:["courgette","aubergine","poivron","tomate","oignon","ail","haricot","epinard","roquette","concombre","carotte","poireau","champignon","shiitake","ciboule"],
-  viandes:["entrecote","agneau","jambon","thon","saumon","gambas","anchois","poulet","boeuf","veau","canard"],
-  laitiers:["beurre","creme","gruyere","burrata","mascarpone","lait","parmesan","fromage","mozzarella"],
-  epicerie:["farine","sucre","miel","huile","sauce soja","vinaigre","miso","curry","ras el-hanout","cannelle","sesame","dukkah","moutarde","capres","herbes","thym","estragon","persil","basilic","safran","piment","sel","poivre"],
-  feculents:["raviole","pate","riz","semoule","pain","pate à pizza","ramen","lentille","feuillet"],
-  fruits:["pomme","orange","citron","avocat","prune","amande","noix","olives"],
-  boissons:["lait de coco","grand marnier","cognac","vin","bouillon","eau"]
+  "🥦 Fruits & Légumes":["courgette","aubergine","poivron","tomate","oignon","ail","haricot","epinard","roquette","concombre","carotte","poireau","champignon","shiitake","ciboule","brocoli","chou","salade","laitue","celeri","fenouil","artichaut","asperge","navet","radis","pomme","orange","citron","avocat","prune","amande","noix","olives","banane","fraise","framboise","mangue","ananas","peche","abricot","raisin","figue","kiwi"],
+  "🥩 Viandes & Poissons":["entrecote","agneau","jambon","thon","saumon","gambas","anchois","poulet","boeuf","veau","canard","porc","escalope","steak","filet","lardons","merguez","chorizo","bacon","dinde","lapin","crevette","cabillaud","lieu","dorade","bar","sole","sardine","maquereau","moule","coquille","homard"],
+  "🧀 Fromages & Crèmerie":["beurre","creme","gruyere","burrata","mascarpone","lait","parmesan","fromage","mozzarella","chevre","roquefort","emmental","reblochon","comté","brie","camembert","feta","ricotta","yaourt","oeuf"],
+  "🍚 Épicerie salée":["farine","huile","sauce soja","vinaigre","miso","curry","ras el-hanout","cannelle","sesame","moutarde","capres","thym","estragon","persil","basilic","safran","piment","sel","poivre","bouillon","pate","riz","semoule","raviole","ramen","lentille","boite","conserve","harissa","mayonnaise","ketchup","tabasco","worcestershire","tahini","coulis","concentre"],
+  "🍬 Épicerie sucrée":["sucre","miel","chocolat","confiture","sirop","caramel","vanille","levure","fecule","cacao","biscuit","cereale","compote","nutella"],
+  "🥖 Pains & Pâtisseries":["pain","baguette","brioche","wrap","tortilla","pita","naan","feuillet","pate à pizza","pate brisee","pate feuilletee","crouton"],
+  "❄️ Surgelés":["surgele","glace","sorbet"],
+  "🥤 Boissons":["lait de coco","grand marnier","cognac","vin","eau","jus","soda","biere","limonade","sirop"],
+  "🧴 Hygiène & Entretien":["savon","shampooing","dentifrice","deodorant","lessive","liquide","eponge","sac poubelle","papier","sopalin","pq","cafe","the","tisane"]
 };
+
+var MANUAL_CATEGORIES = [
+  "🥦 Fruits & Légumes",
+  "🥩 Viandes & Poissons",
+  "🧀 Fromages & Crèmerie",
+  "🍚 Épicerie salée",
+  "🍬 Épicerie sucrée",
+  "🥖 Pains & Pâtisseries",
+  "❄️ Surgelés",
+  "🥤 Boissons",
+  "🧴 Hygiène & Entretien",
+  "📦 Autres"
+];
 
 function categorizeIngredient(name){
   var n=name.toLowerCase();
@@ -1754,13 +1797,38 @@ function formatQty(value,baseUnit){
    STATE — single source of truth
 ═══════════════════════════════════════════ */
 /* ── Real-week helpers ── */
-function getMonday(){
+function getMonday(offset){
   var d=new Date();
-  var day=d.getDay(); // 0=Sun
+  var day=d.getDay();
   var diff=(day===0)?-6:1-day;
-  d.setDate(d.getDate()+diff);
+  d.setDate(d.getDate()+diff+((offset||0)*7));
   d.setHours(0,0,0,0);
   return d;
+}
+
+function getWeekKey(offset){
+  var mon = getMonday(offset);
+  var y = mon.getFullYear();
+  // ISO week number
+  var tmp = new Date(Date.UTC(mon.getFullYear(), mon.getMonth(), mon.getDate()));
+  var dayNum = tmp.getUTCDay() || 7;
+  tmp.setUTCDate(tmp.getUTCDate() + 4 - dayNum);
+  var yearStart = new Date(Date.UTC(tmp.getUTCFullYear(),0,1));
+  var weekNo = Math.ceil((((tmp - yearStart) / 86400000) + 1)/7);
+  return y+"-W"+(weekNo<10?"0":"")+weekNo;
+}
+
+function getCurrentWeekPlanning(){
+  var key = getWeekKey(state.weekOffset);
+  if(!state.allWeeks[key]){
+    // Migration : si weekOffset==0 et allWeeks vide, migrer weekPlanning
+    if(state.weekOffset===0 && Object.keys(state.weekPlanning).length>0 && Object.keys(state.allWeeks).length===0){
+      state.allWeeks[key] = Object.assign({}, state.weekPlanning);
+    } else {
+      state.allWeeks[key] = {};
+    }
+  }
+  return state.allWeeks[key];
 }
 function addDays(d,n){var r=new Date(d);r.setDate(r.getDate()+n);return r;}
 function fmtDay(d){return d.getDate();}
@@ -1773,9 +1841,15 @@ function fmtFull(d){
   return d.getDate()+" "+months[d.getMonth()]+" "+d.getFullYear();
 }
 function getWeekLabel(){
-  var mon=getMonday();
+  var offset = state.weekOffset||0;
+  var mon=getMonday(offset);
   var sun=addDays(mon,6);
-  return "Semaine du "+fmtShort(mon)+" au "+fmtFull(sun);
+  var base = "Semaine du "+fmtShort(mon)+" au "+fmtFull(sun);
+  if(offset===0) return "Cette semaine — "+base;
+  if(offset===1) return "Semaine prochaine — "+base;
+  if(offset===-1) return "Semaine dernière — "+base;
+  if(offset>0) return "Dans "+offset+" semaines — "+base;
+  return "Il y a "+Math.abs(offset)+" semaines — "+base;
 }
 
 var DAYS=["Lun","Mar","Mer","Jeu","Ven","Sam","Dim"];
@@ -1786,11 +1860,15 @@ var state={
   selectedIds:[],     // IDs selected in cart
   selectMode:false,
 
-  // weekPlanning: { "0-midi": recipeId, "0-soir": recipeId, ... }
+  // weekPlanning: { "2024-W10": {"0-midi": recipeId, ...}, ... }
+  // On garde aussi l'ancien format pour compatibilité
   weekPlanning:{},
+  allWeeks:{},        // { "YYYY-WNN": {planning} }
+  weekOffset:0,       // 0=cette semaine, 1=semaine prochaine, -1=semaine passée
 
   // checkedItems: Set of item keys that user has checked off in shopping
   checkedItems:{},    // key -> true
+  manualItems:[],     // [{id, name, category, checked}]
 
   portions:2,
   cardIndex:0,
@@ -1849,9 +1927,11 @@ function saveToStorage(){
     var data = {
       likedIds:      state.likedIds.slice(),
       weekPlanning:  Object.assign({}, state.weekPlanning),
+      allWeeks:      JSON.parse(JSON.stringify(state.allWeeks)),
       checkedItems:  Object.assign({}, state.checkedItems),
       profile:       Object.assign({}, state.profile),
-      customRecipes: CUSTOM_RECIPES.map(function(r){ return Object.assign({},r); })
+      customRecipes: CUSTOM_RECIPES.map(function(r){ return Object.assign({},r); }),
+      manualItems:   state.manualItems.slice()
     };
     var store = _getStorage();
     if(store){
@@ -1870,8 +1950,10 @@ function loadFromStorage(){
     if(!d) return;
     if(d.likedIds)     state.likedIds     = d.likedIds;
     if(d.weekPlanning) state.weekPlanning = d.weekPlanning;
+    if(d.allWeeks)     state.allWeeks     = d.allWeeks;
     if(d.checkedItems) state.checkedItems = d.checkedItems;
     if(d.profile)      state.profile      = Object.assign(state.profile, d.profile);
+    if(d.manualItems)  state.manualItems  = d.manualItems;
     if(d.customRecipes && d.customRecipes.length){
       CUSTOM_RECIPES.splice(0, CUSTOM_RECIPES.length);
       d.customRecipes.forEach(function(r){ CUSTOM_RECIPES.push(r); });
@@ -1883,11 +1965,11 @@ function loadFromStorage(){
 
 
 // shoppingList is DERIVED — never stored
-function computeShoppingList(){
-  // 1. Collect all recipe IDs in planning
+function computeShoppingListForWeek(wp){
+  // Compute shopping list for a single week planning object
   var recipeIds={};
-  Object.keys(state.weekPlanning).forEach(function(k){
-    var id=state.weekPlanning[k];
+  Object.keys(wp).forEach(function(k){
+    var id=wp[k];
     recipeIds[id]=(recipeIds[id]||0)+1;
   });
   // 2. Aggregate ingredients
@@ -1970,6 +2052,9 @@ function setActiveNav(tabIdx){
 }
 
 function showScreen(id){
+  // Gérer visibilité du bouton FAB courses
+  var fab = document.getElementById("btn-add-manual");
+  if(fab) fab.style.display = (id === "shopping") ? "flex" : "none";
   var all=document.querySelectorAll(".screen");
   for(var i=0;i<all.length;i++){all[i].classList.remove("active");all[i].style.display="none";}
   var t=document.getElementById(id);
@@ -2053,7 +2138,7 @@ function closeModal(){
 ═══════════════════════════════════════════ */
 function updateBadges(pop){
   var n=state.likedIds.length;
-  var mealN=Object.keys(state.weekPlanning).length;
+  var mealN=Object.keys(getCurrentWeekPlanning()).length;
 
   // Each nav has buttons: tab0=home, tab1=saved(liked), tab2=calendar, tab3=shopping
   document.querySelectorAll(".bottom-nav").forEach(function(nav){
@@ -2255,6 +2340,8 @@ function renderCard(){
   document.getElementById("ctag1").textContent=r.tag1;
   document.getElementById("ctag2").textContent=r.tag2||"";
   document.getElementById("ctime").textContent=r.time;
+  var _rp = estimateRecipePrice(r);
+  document.getElementById("cprice").textContent = _rp ? ("~"+_rp.lo+"-"+_rp.hi+"€") : "";
 
   // Disliked badge
   var existing=document.getElementById("dislike-badge");
@@ -2507,7 +2594,8 @@ function confirmPlanning(){
   var r=getRecipe(state.pickerRecipeId);
   if(!r){ toast("Recette introuvable"); return; }
   var key=state.pickerDay+"-"+state.pickerTime;
-  state.weekPlanning[key]=state.pickerRecipeId;
+  var wp = getCurrentWeekPlanning();
+  wp[key]=state.pickerRecipeId;
   state.checkedItems={};
   updateBadges(false);
   closeModal();
@@ -2526,11 +2614,13 @@ function confirmPlanning(){
 function renderCalendar(){
   var strip=document.getElementById("week-strip");
   strip.innerHTML="";
-  // Force inline styles to prevent any external override (e.g. Cloudflare injection)
   strip.style.cssText="display:flex!important;flex-direction:row!important;width:100%;padding:0 12px 10px;box-sizing:border-box;flex-shrink:0;";
+  var offset = state.weekOffset||0;
+  var isPast = offset < 0;
   var today=new Date().getDay();
   var todayIdx=(today===0)?6:today-1;
-  var monday=getMonday();
+  var monday=getMonday(offset);
+  var wp = getCurrentWeekPlanning(); // planning de la semaine affichée
   DAYS.forEach(function(d,i){
     var dayDate=addDays(monday,i);
     var col=document.createElement("div");
@@ -2554,19 +2644,38 @@ function renderCalendar(){
   DAYS_FULL.forEach(function(dayFull,dayIdx){
     var dayHasMeal=false;
     moments.forEach(function(m){
-      if(state.weekPlanning[dayIdx+"-"+m]) dayHasMeal=true;
+      if(wp[dayIdx+"-"+m]) dayHasMeal=true;
     });
 
     var sec=document.createElement("div");
     sec.className="cal-day-section";
+    if(isPast) sec.style.opacity="0.55";
+
+    // Calculer si c'est aujourd'hui
+    var todayDate = new Date();
+    var dayDate2 = addDays(monday, dayIdx);
+    var isThisDay = (dayDate2.getFullYear()===todayDate.getFullYear() &&
+                     dayDate2.getMonth()===todayDate.getMonth() &&
+                     dayDate2.getDate()===todayDate.getDate());
+    if(isThisDay){
+      sec.style.borderLeft = "3px solid #FF3E7F";
+      sec.style.paddingLeft = "8px";
+      sec.style.marginLeft = "-8px";
+    }
+
     var titleEl=document.createElement("div");
     titleEl.className="cal-day-title";
-    titleEl.textContent=dayFull;
+    titleEl.style.cssText = isThisDay
+      ? "display:flex;align-items:center;gap:8px;"
+      : "";
+    titleEl.innerHTML = dayFull + (isThisDay
+      ? "<span style='font-size:10px;font-weight:700;color:#fff;background:#FF3E7F;padding:2px 8px;border-radius:20px;'>Aujourd'hui</span>"
+      : "");
     sec.appendChild(titleEl);
 
     moments.forEach(function(moment){
       var key=dayIdx+"-"+moment;
-      var rid=state.weekPlanning[key];
+      var rid=wp[key];
       if(rid!==undefined){
         hasAny=true;
         var r=getRecipe(rid);
@@ -2582,7 +2691,7 @@ function renderCalendar(){
             "<div class='meal-title'>"+r.title+"</div>"+
             "<div class='meal-meta'>"+r.time+" • "+r.tag1+"</div>"+
           "</div>"+
-          "<button class='meal-remove' data-key='"+key+"'>✕</button>";
+          (!isPast ? "<button class='meal-remove' data-key='"+key+"'>✕</button>" : "");
         // Click to detail
         slot.addEventListener("click",function(e){
           if(e.target.closest(".meal-remove")) return;
@@ -2591,7 +2700,7 @@ function renderCalendar(){
         // Remove
         slot.querySelector(".meal-remove").addEventListener("click",function(e){
           e.stopPropagation();
-          delete state.weekPlanning[key];
+          delete wp[key];
           renderCalendar();
           renderShoppingList();
           state.checkedItems={};
@@ -2612,7 +2721,7 @@ function renderCalendar(){
         empty.className="meal-slot-empty";
         empty.innerHTML="<span style='font-size:16px'>"+(moment==="midi"?"🌤️":"🌙")+"</span><span>Ajouter un repas du "+moment+"…</span>";
         empty.addEventListener("click",function(){
-          // Quick add: open planning picker defaulting to this day/moment
+          if(isPast){toast("Semaine passée — consultation uniquement");return;}
           if(state.likedIds.length===0){toast("Sauvegardez des recettes d'abord");return;}
           state.pickerDay=dayIdx;
           state.pickerTime=moment;
@@ -2629,8 +2738,8 @@ function renderCalendar(){
           var rid2=state.weekPlanning[fromKey];
           if(rid2!==undefined){
             if(fromKey === key){ toast("Même emplacement"); return; }
-            delete state.weekPlanning[fromKey];
-            state.weekPlanning[key]=rid2;
+            delete wp[fromKey];
+            wp[key]=rid2;
             state.checkedItems={};
             updateBadges(false);
             saveToStorage();
@@ -2652,10 +2761,13 @@ function renderCalendar(){
     body.appendChild(hint);
   }
 
+  // Week label
+  updateWeekLabel();
+
   // Planning indicator
   var indic = document.getElementById("cal-shop-indicator");
   if(indic){
-    var mealCount = Object.keys(state.weekPlanning).length;
+    var mealCount = Object.keys(wp).length;
     if(mealCount === 0){
       indic.style.display = "none";
     } else {
@@ -2718,8 +2830,12 @@ function openQuickAddPicker(dayIdx,moment){
       var ids = state.likedIds;
       var q = (filter||"").toLowerCase().trim();
       var found = 0;
-      // Recettes déjà dans le planning cette semaine
+      // Griser les recettes planifiées sur TOUTES les semaines (période glissante)
       var plannedIds = {};
+      Object.values(state.allWeeks).forEach(function(wp){
+        Object.values(wp).forEach(function(rid){ plannedIds[rid]=true; });
+      });
+      // Inclure aussi weekPlanning legacy
       Object.values(state.weekPlanning).forEach(function(rid){ plannedIds[rid]=true; });
       ids.forEach(function(id){
         var r=getRecipe(id);if(!r) return;
@@ -2732,7 +2848,8 @@ function openQuickAddPicker(dayIdx,moment){
         btn.addEventListener("mouseenter",function(){btn.style.borderColor="var(--pink)";btn.style.background="var(--pink-soft)";});
         btn.addEventListener("mouseleave",function(){btn.style.borderColor="var(--gray-light)";btn.style.background="transparent";});
         btn.addEventListener("click",function(){
-          state.weekPlanning[dayIdx+"-"+moment]=id;
+          var wp2=getCurrentWeekPlanning();
+          wp2[dayIdx+"-"+moment]=id;
           state.checkedItems={};
           updateBadges(false);
           saveToStorage();
@@ -2905,156 +3022,327 @@ function estimateShoppingCost(grouped){
   return total;
 }
 
+// Estimation fourchette prix par recette (pour 2 personnes)
+function estimateRecipePrice(recipe){
+  if(!recipe) return null;
+  // Base selon tags
+  var base = 6;
+  var tag = (recipe.tag1||"").toUpperCase();
+  var title = (recipe.title||"").toLowerCase();
+  if(tag==="POISSON" || tag==="FRUITS DE MER") base = 9;
+  else if(tag==="VIANDE") base = 8;
+  else if(tag==="POULET") base = 7;
+  else if(tag==="VÉGÉTARIEN" || tag==="VEGETARIEN") base = 5;
+  else if(tag==="PÂTES" || tag==="PATES") base = 5;
+  else if(tag==="BURGER") base = 7;
+  else if(tag==="GRATIN" || tag==="TRADITIONNEL") base = 6;
+  // Ajuster selon nb ingrédients
+  var ing = recipe.ing ? recipe.ing.length : 4;
+  if(ing > 7) base += 2;
+  else if(ing < 4) base -= 1;
+  var lo = Math.max(3, base - 2);
+  var hi = base + 3;
+  return {lo: lo, hi: hi};
+}
+
 function renderShoppingList(){
   var body = document.getElementById("shop-body");
   body.innerHTML = "";
 
-  // Update week label
   var weekLbl = document.getElementById("shop-week-label");
-  if(weekLbl) weekLbl.textContent = getWeekLabel();
+  if(weekLbl) weekLbl.textContent = "";
 
-  var planCount = Object.keys(state.weekPlanning).length;
-  var countEl = document.getElementById("shop-count-label");
+  // Collecter toutes les semaines planifiées
+  var allWeekKeys = Object.keys(state.allWeeks).filter(function(k){
+    return Object.keys(state.allWeeks[k]).length > 0;
+  }).sort();
 
-  // Build recipe summary
-  var summaryEl = document.getElementById("shop-recipes-summary");
-  if(summaryEl){
-    if(planCount === 0){
-      summaryEl.style.display = "none";
-    } else {
-      // Collect unique recipe titles
-      var seenIds = {};
-      var recipeTitles = [];
-      Object.values(state.weekPlanning).forEach(function(rid){
-        if(!seenIds[rid]){ seenIds[rid]=true; var r=getRecipe(rid); if(r) recipeTitles.push(r.title); }
-      });
-      var inner = "<div style='font-size:11px;font-weight:700;color:#6B7280;letter-spacing:.4px;text-transform:uppercase;margin-bottom:6px;'>Générée à partir de "+recipeTitles.length+" recette"+(recipeTitles.length>1?"s":"")+" :</div>";
-      recipeTitles.forEach(function(t){
-        inner += "<div style='font-size:12px;color:#1A1A2E;padding:2px 0 2px 10px;border-left:2px solid #FF3E7F;margin-bottom:3px;'>"+t+"</div>";
-      });
-      summaryEl.innerHTML = inner;
-      summaryEl.style.display = "block";
-    }
+  // Migration : inclure weekPlanning si allWeeks vide
+  if(allWeekKeys.length === 0 && Object.keys(state.weekPlanning).length > 0){
+    allWeekKeys = ["current"];
   }
 
-  if(planCount === 0){
+  var totalMeals = allWeekKeys.reduce(function(acc, k){
+    var wp = k === "current" ? state.weekPlanning : state.allWeeks[k];
+    return acc + Object.keys(wp).length;
+  }, 0);
+
+  var countEl = document.getElementById("shop-count-label");
+  var summaryEl = document.getElementById("shop-recipes-summary");
+
+  if(totalMeals === 0){
     if(countEl) countEl.textContent = "Planifiez des repas pour générer la liste";
     var _ce = document.getElementById("shop-cost-label"); if(_ce) _ce.style.display = "none";
+    if(summaryEl) summaryEl.style.display = "none";
     var em = document.createElement("div");
     em.style.cssText = "display:flex;flex-direction:column;align-items:center;justify-content:center;padding:60px 30px;text-align:center;";
-    var emIcon = document.createElement("div");
-    emIcon.style.cssText = "font-size:52px;opacity:.3;margin-bottom:14px;";
-    emIcon.textContent = "🛒";
-    var emTitle = document.createElement("div");
-    emTitle.style.cssText = "font-family:'Playfair Display',Georgia,serif;font-size:18px;font-weight:700;color:#1A1A2E;margin-bottom:8px;";
-    emTitle.textContent = "Liste vide";
-    var emSub = document.createElement("div");
-    emSub.style.cssText = "font-size:12px;color:#6B7280;line-height:1.7;";
-    emSub.innerHTML = "Ajoutez des recettes à votre planning<br>pour générer la liste automatiquement.";
-    em.appendChild(emIcon); em.appendChild(emTitle); em.appendChild(emSub);
+    em.innerHTML = "<div style='font-size:52px;opacity:.3;margin-bottom:14px;'>🛒</div><div style='font-family:Playfair Display,Georgia,serif;font-size:18px;font-weight:700;color:#1A1A2E;margin-bottom:8px;'>Liste vide</div><div style='font-size:12px;color:#6B7280;line-height:1.7;'>Ajoutez des recettes à votre planning<br>pour générer la liste automatiquement.</div>";
     body.appendChild(em);
     return;
   }
 
-  var grouped = computeShoppingList();
-
-  // Cost estimation
-  var costEl = document.getElementById("shop-cost-label");
-  var costVal = document.getElementById("shop-cost-value");
-  if(costEl && costVal){
-    var est = estimateShoppingCost(grouped);
-    if(est > 0){
-      costEl.style.display = "inline-flex";
-      costVal.textContent = est.toFixed(1).replace(".",",") + " €";
-    } else {
-      costEl.style.display = "none";
+  // Récapitulatif recettes (toutes semaines)
+  if(summaryEl){
+    var recipeCount = {};
+    allWeekKeys.forEach(function(k){
+      var wp = k === "current" ? state.weekPlanning : state.allWeeks[k];
+      Object.values(wp).forEach(function(rid){
+        recipeCount[rid] = (recipeCount[rid]||0)+1;
+      });
+    });
+    var totalRecipes = Object.values(recipeCount).reduce(function(a,b){return a+b;},0);
+    var sumLo = 0, sumHi = 0;
+    var inner = "<div style='font-size:11px;font-weight:700;color:#6B7280;letter-spacing:.4px;text-transform:uppercase;margin-bottom:6px;'>"+totalRecipes+" repas planifiés :</div>";
+    Object.keys(recipeCount).forEach(function(rid){
+      var r = getRecipe(parseInt(rid)); if(!r) return;
+      var cnt = recipeCount[rid];
+      var rp = estimateRecipePrice(r);
+      if(rp){ sumLo += rp.lo * cnt; sumHi += rp.hi * cnt; }
+      var priceStr = rp ? "<span style='color:#FF3E7F;font-weight:600;'>~"+rp.lo+"-"+rp.hi+"€</span>" : "";
+      inner += "<div style='font-size:12px;color:#1A1A2E;padding:2px 0 2px 10px;border-left:2px solid #FF3E7F;margin-bottom:3px;display:flex;justify-content:space-between;align-items:center;'>"+
+        "<span>"+r.title+(cnt>1?" <span style='color:#FF3E7F;font-weight:700;'>×"+cnt+"</span>":"")+"</span>"+
+        priceStr+
+        "</div>";
+    });
+    if(sumLo > 0){
+      inner += "<div style='margin-top:8px;padding-top:8px;border-top:1px solid #F0F0F5;display:flex;justify-content:space-between;align-items:center;'>"+
+        "<span style='font-size:12px;font-weight:700;color:#1A1A2E;'>Total estimé</span>"+
+        "<span style='font-size:14px;font-weight:700;color:#FF3E7F;'>~"+sumLo+"-"+sumHi+" €</span>"+
+        "</div>";
     }
+    summaryEl.innerHTML = inner;
+    summaryEl.style.display = "block";
   }
 
-  var catOrder = ["legumes","viandes","laitiers","feculents","fruits","epicerie","boissons"];
-  var catEmojis = {legumes:"🥦",viandes:"🥩",laitiers:"🧀",feculents:"🍚",fruits:"🍎",epicerie:"🫙",boissons:"🥛"};
-  // Add any extra categories not in default order
-  Object.keys(grouped).forEach(function(c){ if(catOrder.indexOf(c)===-1) catOrder.push(c); });
-
   var totalItems = 0, checkedCount = 0;
+  var totalCost = 0;
 
-  catOrder.forEach(function(cat){
-    var items = grouped[cat];
-    if(!items || !items.length) return;
-    totalItems += items.length;
+  // ── Afficher par semaine ──────────────────────────────────
+  allWeekKeys.forEach(function(wkey){
+    var wp = wkey === "current" ? state.weekPlanning : state.allWeeks[wkey];
+    if(!Object.keys(wp).length) return;
 
-    // Category section
-    var section = document.createElement("div");
-    section.style.cssText = "margin-bottom:16px;";
+    // Header semaine
+    var weekHeader = document.createElement("div");
+    weekHeader.style.cssText = "margin:16px 0 10px;background:#FFF5F8;border-radius:14px;padding:12px 14px;border-left:3px solid #FF3E7F;";
 
-    // Category title
-    var title = document.createElement("div");
-    title.style.cssText = "font-size:10px;font-weight:700;color:#6B7280;letter-spacing:.7px;text-transform:uppercase;margin-bottom:6px;padding:0 2px;";
-    title.textContent = (catEmojis[cat]||"📦") + "  " + cat.charAt(0).toUpperCase() + cat.slice(1);
-    section.appendChild(title);
+    // Calculer label semaine depuis la clé YYYY-WNN
+    var weekLabelText = "Semaine";
+    if(wkey !== "current"){
+      try {
+        var parts = wkey.split("-W");
+        var year = parseInt(parts[0]);
+        var week = parseInt(parts[1]);
+        var jan4 = new Date(year, 0, 4);
+        var jan4day = jan4.getDay() || 7;
+        var mon = new Date(jan4.getTime() + (week-1)*7*86400000 - (jan4day-1)*86400000);
+        var sun = new Date(mon.getTime() + 6*86400000);
+        var months = ["jan","fév","mar","avr","mai","jun","jul","aoû","sep","oct","nov","déc"];
+        var monStr = mon.getDate()+" "+months[mon.getMonth()];
+        var sunStr = sun.getDate()+" "+months[sun.getMonth()]+" "+sun.getFullYear();
+        var curKey = getWeekKey(0);
+        var nextKey = getWeekKey(1);
+        if(wkey === curKey) weekLabelText = "📅 Cette semaine · "+monStr+" – "+sunStr;
+        else if(wkey === nextKey) weekLabelText = "📅 Semaine prochaine · "+monStr+" – "+sunStr;
+        else weekLabelText = "📅 Semaine du "+monStr+" – "+sunStr;
+      } catch(e){ weekLabelText = "📅 "+wkey; }
+    } else {
+      weekLabelText = "📅 Cette semaine";
+    }
 
-    // Items card
-    var card = document.createElement("div");
-    card.style.cssText = "background:#fff;border-radius:14px;overflow:hidden;box-shadow:0 1px 6px rgba(0,0,0,.06);";
+    // Recettes de cette semaine
+    var weekRecipes = {};
+    Object.values(wp).forEach(function(rid){
+      weekRecipes[rid] = (weekRecipes[rid]||0)+1;
+    });
+    var recipePills = Object.keys(weekRecipes).map(function(rid){
+      var r = getRecipe(parseInt(rid));
+      if(!r) return "";
+      var cnt = weekRecipes[rid];
+      return r.emoji+" "+r.title+(cnt>1?" <b style='color:#FF3E7F;'>×"+cnt+"</b>":"");
+    }).filter(Boolean).join("  •  ");
 
-    items.forEach(function(item, idx){
-      var checked = !!state.checkedItems[item.key];
-      if(checked) checkedCount++;
+    weekHeader.innerHTML =
+      "<div style='font-size:12px;font-weight:700;color:#FF3E7F;margin-bottom:6px;'>"+weekLabelText+"</div>"+
+      "<div style='font-size:11px;color:#6B7280;line-height:1.7;'>"+recipePills+"</div>";
+    body.appendChild(weekHeader);
 
-      var row = document.createElement("div");
-      row.style.cssText = "display:flex;align-items:center;gap:12px;padding:12px 14px;" +
-        (idx < items.length-1 ? "border-bottom:1px solid #F0F0F5;" : "") +
-        (checked ? "opacity:.45;" : "") +
-        "cursor:pointer;transition:opacity .15s;";
+    // Construire la liste de cette semaine
+    var grouped = computeShoppingListForWeek(wp);
 
-      // Checkbox
-      var cb = document.createElement("div");
-      cb.style.cssText = "width:22px;height:22px;border-radius:7px;border:2px solid " +
-        (checked ? "#10B981;background:#10B981;" : "#D1D5DB;") +
-        "display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:13px;color:#fff;transition:all .18s;";
-      cb.textContent = checked ? "✓" : "";
-
-      // Name
-      var name = document.createElement("span");
-      name.style.cssText = "flex:1;font-size:13px;font-weight:500;color:#1A1A2E;" +
-        (checked ? "text-decoration:line-through;color:#9CA3AF;" : "");
-      name.textContent = item.name;
-
-      // Qty + unit price
-      var qty = document.createElement("span");
-      qty.style.cssText = "display:flex;flex-direction:column;align-items:flex-end;flex-shrink:0;gap:1px;";
-      var qtyVal = document.createElement("span");
-      qtyVal.style.cssText = "font-size:12px;font-weight:700;color:#FF3E7F;";
-      qtyVal.textContent = item.qty;
-      var unitCost = estimateItemCost(item.name, item.qty);
-      var unitPriceEl = document.createElement("span");
-      unitPriceEl.style.cssText = "font-size:10px;color:#9CA3AF;font-weight:500;";
-      unitPriceEl.textContent = "≈ " + unitCost.toFixed(2).replace(".",",") + " €";
-      qty.appendChild(qtyVal);
-      qty.appendChild(unitPriceEl);
-
-      row.appendChild(cb);
-      row.appendChild(name);
-      row.appendChild(qty);
-
-      row.addEventListener("click", function(){
-        if(state.checkedItems[item.key]){
-          delete state.checkedItems[item.key];
-        } else {
-          state.checkedItems[item.key] = true;
-        }
-        saveToStorage();
-        renderShoppingList();
+    // Source ingrédients
+    var ingredientSources = {};
+    Object.values(wp).forEach(function(rid){
+      var r = getRecipe(rid); if(!r) return;
+      r.ing.forEach(function(pair){
+        var key = pair[0].toLowerCase().trim();
+        if(!ingredientSources[key]) ingredientSources[key] = [];
+        if(ingredientSources[key].indexOf(r.title) === -1) ingredientSources[key].push(r.title);
       });
-
-      card.appendChild(row);
     });
 
-    section.appendChild(card);
-    body.appendChild(section);
+    var catOrder = Object.keys(ING_CATEGORIES);
+    Object.keys(grouped).forEach(function(c){ if(catOrder.indexOf(c)===-1) catOrder.push(c); });
+
+    catOrder.forEach(function(cat){
+      var items = grouped[cat];
+      if(!items || !items.length) return;
+      totalItems += items.length;
+
+      var section = document.createElement("div");
+      section.style.cssText = "margin-bottom:12px;";
+
+      var title = document.createElement("div");
+      title.style.cssText = "font-size:11px;font-weight:700;color:#6B7280;letter-spacing:.5px;margin-bottom:6px;padding:0 2px;";
+      title.textContent = cat;
+      section.appendChild(title);
+
+      var card = document.createElement("div");
+      card.style.cssText = "background:#fff;border-radius:14px;overflow:hidden;box-shadow:0 1px 6px rgba(0,0,0,.06);";
+
+      items.forEach(function(item, idx){
+        var checked = !!state.checkedItems[item.key];
+        if(checked) checkedCount++;
+        var unitCost = estimateItemCost(item.name, item.qty);
+        totalCost += unitCost;
+
+        var row = document.createElement("div");
+        row.style.cssText = "display:flex;align-items:center;gap:12px;padding:10px 14px;"+
+          (idx < items.length-1 ? "border-bottom:1px solid #F0F0F5;" : "")+
+          (checked ? "opacity:.45;" : "")+"cursor:pointer;transition:opacity .15s;";
+
+        var cb = document.createElement("div");
+        cb.style.cssText = "width:22px;height:22px;border-radius:7px;border:2px solid "+
+          (checked ? "#10B981;background:#10B981;" : "#D1D5DB;")+
+          "display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:13px;color:#fff;transition:all .18s;";
+        cb.textContent = checked ? "✓" : "";
+
+        var nameWrap = document.createElement("div");
+        nameWrap.style.cssText = "flex:1;min-width:0;";
+
+        var name = document.createElement("div");
+        name.style.cssText = "font-size:13px;font-weight:500;"+(checked?"text-decoration:line-through;color:#9CA3AF;":"color:#1A1A2E;");
+        name.textContent = item.name;
+
+        var sources = ingredientSources[item.name.toLowerCase().trim()];
+        if(sources && sources.length){
+          var src = document.createElement("div");
+          src.style.cssText = "font-size:10px;color:#9CA3AF;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;";
+          src.textContent = "← "+sources.join(", ");
+          nameWrap.appendChild(name);
+          nameWrap.appendChild(src);
+        } else {
+          nameWrap.appendChild(name);
+        }
+
+        var qty = document.createElement("span");
+        qty.style.cssText = "display:flex;flex-direction:column;align-items:flex-end;flex-shrink:0;gap:1px;";
+        var qtyVal = document.createElement("span");
+        qtyVal.style.cssText = "font-size:12px;font-weight:700;color:#FF3E7F;";
+        qtyVal.textContent = item.qty;
+        qty.appendChild(qtyVal);
+
+        row.appendChild(cb);
+        row.appendChild(nameWrap);
+        row.appendChild(qty);
+
+        row.addEventListener("click", function(){
+          if(state.checkedItems[item.key]) delete state.checkedItems[item.key];
+          else state.checkedItems[item.key] = true;
+          saveToStorage();
+          renderShoppingList();
+        });
+
+        card.appendChild(row);
+      });
+
+      section.appendChild(card);
+      body.appendChild(section);
+    });
   });
 
-  if(countEl) countEl.textContent = totalItems + " ingrédient" + (totalItems>1?"s":"") + " · " + checkedCount + " coché" + (checkedCount>1?"s":"");
+  // ── Ajouts manuels ────────────────────────────────────────
+  if(state.manualItems.length > 0){
+    var manualHeader = document.createElement("div");
+    manualHeader.style.cssText = "margin:16px 0 10px;";
+    manualHeader.innerHTML = "<div style='font-size:13px;font-weight:700;color:#1A1A2E;'>🛒 Mes ajouts</div>";
+    body.appendChild(manualHeader);
+
+    var manualBycat = {};
+    state.manualItems.forEach(function(it){
+      var c = it.category||"📦 Autres";
+      if(!manualBycat[c]) manualBycat[c]=[];
+      manualBycat[c].push(it);
+    });
+
+    Object.keys(manualBycat).forEach(function(cat){
+      var items = manualBycat[cat];
+      totalItems += items.length;
+
+      var section = document.createElement("div");
+      section.style.cssText = "margin-bottom:12px;";
+
+      var title = document.createElement("div");
+      title.style.cssText = "font-size:11px;font-weight:700;color:#6B7280;letter-spacing:.5px;margin-bottom:6px;padding:0 2px;";
+      title.textContent = cat;
+      section.appendChild(title);
+
+      var card = document.createElement("div");
+      card.style.cssText = "background:#fff;border-radius:14px;overflow:hidden;box-shadow:0 1px 6px rgba(0,0,0,.06);";
+
+      items.forEach(function(it, idx){
+        var checked = !!it.checked;
+        if(checked) checkedCount++;
+
+        var row = document.createElement("div");
+        row.style.cssText = "display:flex;align-items:center;gap:12px;padding:10px 14px;"+
+          (idx<items.length-1?"border-bottom:1px solid #F0F0F5;":"")+
+          (checked?"opacity:.45;":"")+"cursor:pointer;";
+
+        var cb = document.createElement("div");
+        cb.style.cssText = "width:22px;height:22px;border-radius:7px;border:2px solid "+
+          (checked?"#10B981;background:#10B981;":"#D1D5DB;")+
+          "display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:13px;color:#fff;";
+        cb.textContent = checked?"✓":"";
+
+        var name = document.createElement("div");
+        name.style.cssText = "flex:1;font-size:13px;font-weight:500;"+(checked?"text-decoration:line-through;color:#9CA3AF;":"color:#1A1A2E;");
+        name.textContent = it.name;
+
+        var del = document.createElement("button");
+        del.style.cssText = "background:none;border:none;font-size:18px;color:#D1D5DB;cursor:pointer;padding:0 4px;flex-shrink:0;";
+        del.textContent = "×";
+        del.addEventListener("click", function(e){
+          e.stopPropagation();
+          state.manualItems = state.manualItems.filter(function(x){ return x.id!==it.id; });
+          saveToStorage();
+          renderShoppingList();
+        });
+
+        row.appendChild(cb);
+        row.appendChild(name);
+        row.appendChild(del);
+
+        row.addEventListener("click", function(e){
+          if(e.target===del) return;
+          it.checked = !it.checked;
+          saveToStorage();
+          renderShoppingList();
+        });
+
+        card.appendChild(row);
+      });
+
+      section.appendChild(card);
+      body.appendChild(section);
+    });
+  }
+
+  if(countEl) countEl.textContent = totalItems+" article"+(totalItems>1?"s":"")+" · "+checkedCount+" coché"+(checkedCount>1?"s":"");
+
+  // Masquer la fenêtre d'estimation séparée (consolidée dans le récap)
+  var costEl = document.getElementById("shop-cost-label");
+  if(costEl) costEl.style.display = "none";
 }
 
 
@@ -3309,6 +3597,112 @@ function initProfileScreen(){
   if(goSaved) goSaved.addEventListener("click",function(){navigateTo("saved");});
 }
 
+/* ═══════════════════════════════════════════
+   AJOUTS MANUELS — LISTE DE COURSES
+═══════════════════════════════════════════ */
+var _selectedManualCat = "📦 Autres";
+
+window.openAddManualModal = function openAddManualModal(){
+  var modal = document.getElementById("modal-add-manual");
+  var input = document.getElementById("manual-item-input");
+  var picker = document.getElementById("manual-cat-picker");
+
+  // Reset
+  input.value = "";
+  _selectedManualCat = "📦 Autres";
+  picker.innerHTML = "";
+
+  // Construire les boutons de catégorie
+  MANUAL_CATEGORIES.forEach(function(cat){
+    var btn = document.createElement("button");
+    btn.textContent = cat;
+    btn.dataset.cat = cat;
+    btn.style.cssText = "padding:6px 10px;border-radius:20px;border:2px solid #F0F0F5;background:transparent;font-size:11px;font-weight:600;cursor:pointer;transition:all .15s;color:#6B7280;font-family:inherit;";
+    btn.addEventListener("click", function(){
+      _selectedManualCat = cat;
+      Array.from(picker.children).forEach(function(b){
+        b.style.background = "transparent";
+        b.style.borderColor = "#F0F0F5";
+        b.style.color = "#6B7280";
+      });
+      btn.style.background = "#FF3E7F";
+      btn.style.borderColor = "#FF3E7F";
+      btn.style.color = "#fff";
+    });
+    picker.appendChild(btn);
+  });
+
+  // Sélectionner "Autres" par défaut
+  picker.children[picker.children.length-1].click();
+
+  modal.style.display = "flex";
+  setTimeout(function(){ input.focus(); }, 100);
+}
+
+window.closeAddManualModal = function closeAddManualModal(){
+  document.getElementById("modal-add-manual").style.display = "none";
+}
+
+window.confirmAddManual = function confirmAddManual(){
+  var input = document.getElementById("manual-item-input");
+  var name = input.value.trim();
+  if(!name) return;
+
+  // Auto-détecter la catégorie si possible
+  var autoCat = null;
+  var nameLower = name.toLowerCase();
+  Object.keys(ING_CATEGORIES).forEach(function(cat){
+    if(autoCat) return;
+    ING_CATEGORIES[cat].forEach(function(kw){
+      if(nameLower.indexOf(kw) !== -1) autoCat = cat;
+    });
+  });
+
+  state.manualItems.push({
+    id: Date.now(),
+    name: name,
+    category: autoCat || _selectedManualCat,
+    checked: false
+  });
+
+  saveToStorage();
+  closeAddManualModal();
+  renderShoppingList();
+}
+
+// Fermer modal en cliquant dehors
+document.addEventListener("click", function(e){
+  var modal = document.getElementById("modal-add-manual");
+  if(modal && modal.style.display === "flex" && e.target === modal){
+    closeAddManualModal();
+  }
+});
+
+// Enter pour valider
+document.addEventListener("keydown", function(e){
+  if(e.key === "Enter"){
+    var modal = document.getElementById("modal-add-manual");
+    if(modal && modal.style.display === "flex") confirmAddManual();
+  }
+});
+
+
+function updateWeekLabel(){
+  var el = document.getElementById("cal-week-label");
+  if(!el) return;
+  var offset = state.weekOffset||0;
+  var mon = getMonday(offset);
+  var sun = addDays(mon,6);
+  var label = fmtShort(mon)+" – "+fmtFull(sun);
+  if(offset===0) label = "Cette semaine · "+label;
+  else if(offset===1) label = "Semaine prochaine · "+label;
+  else if(offset===-1) label = "Semaine dernière · "+label;
+  else if(offset>0) label = "Dans "+offset+" sem. · "+label;
+  else label = "Il y a "+Math.abs(offset)+" sem. · "+label;
+  el.textContent = label;
+}
+
+
 function init(){
   // Charger les données sauvegardées
   loadFromStorage();
@@ -3416,8 +3810,21 @@ function init(){
   });
 
   // Calendar
+  bind("btn-week-prev",function(){
+    state.weekOffset=(state.weekOffset||0)-1;
+    renderCalendar();
+    renderShoppingList();
+    updateWeekLabel();
+  });
+  bind("btn-week-next",function(){
+    state.weekOffset=(state.weekOffset||0)+1;
+    renderCalendar();
+    renderShoppingList();
+    updateWeekLabel();
+  });
   bind("btn-clear-week",function(){
-    state.weekPlanning={};
+    var wkey=getWeekKey(state.weekOffset);
+    state.allWeeks[wkey]={};
     state.checkedItems={};
     updateBadges(false);
     saveToStorage();
